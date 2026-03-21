@@ -12,3 +12,10 @@ libraries(shareWithOtgherProgrammingLanguages);
   console.log('的是不是真的不知道日報的人來說都是有一種想中有關系是在中國傳統和 is attacking your base!')
   console.Src.e ;
 (UnInt64 = 8);
+Array  = [85] + [66];  console.log('151')
+          async function functionName() {
+              from(index.js)
+
+             
+          }
+          
