@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PBR Simulation — Cubes & Planes</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a0f; overflow: hidden; font-family: monospace; }
+    canvas { display: block; }
+    #ui {
+      position: fixed;
+      top: 16px;
+      left: 16px;
+      color: #ccc;
+      font-size: 12px;
+      line-height: 1.8;
+      background: rgba(0,0,0,0.55);
+      padding: 10px 14px;
+      border-radius: 6px;
+      pointer-events: none;
+    }
+    #ui span { color: #f0c060; }
+    #ui .lbl { color: #80c0ff; }
+  </style>
+</head>
+<body>
+  <div id="ui">
+    <div><span class="lbl">Render Engine</span>  : <span>DirectX (WebGL)</span></div>
+    <div><span class="lbl">Physics Engine</span> : <span>Bullet Physics</span></div>
+    <div><span class="lbl">Shading</span>        : <span>PBR</span></div>
+    <div><span class="lbl">Texturing</span>      : <span>PBR</span></div>
+    <div><span class="lbl">Shadows</span>        : <span>Ray-traced soft</span></div>
+    <div style="margin-top:6px"><span class="lbl">Light angle</span>    : <span id="angle">0°</span></div>
+    <div><span class="lbl">Time</span>           : <span id="clock">0.0s</span></div>
+    <div><span class="lbl">Touching</span>       : <span id="touching">—</span></div>
+  </div>
+
+  <script type="importmap">
+    { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.163.0/build/three.module.js",
+                   "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.163.0/examples/jsm/" } }
+  </script>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+    /* ── Renderer ─────────────────────────────────────────────────── */
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type    = THREE.PCFSoftShadowMap;
+    renderer.toneMapping       = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.2;
+    document.body.appendChild(renderer.domElement);
+
+    /* ── Scene & Camera ───────────────────────────────────────────── */
+    const scene  = new THREE.Scene();
+    scene.background = new THREE.Color(0x0a0a0f);
+    scene.fog        = new THREE.Fog(0x0a0a0f, 30, 80);
+
+    const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 200);
+    camera.position.set(10, 9, 16);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.target.set(0, 1, 0);
+    controls.enableDamping = true;
+
+    /* ── Lights ───────────────────────────────────────────────────── */
+    // Ambient — global lighting contribution
+    const ambient = new THREE.AmbientLight(0x334466, 0.6);
+    scene.add(ambient);
+
+    // Directional — the shadow-casting sun/global light
+    // Rotates over time (shadow_rotation_from_time equivalent)
+    const sun = new THREE.DirectionalLight(0xfff4e0, 2.2);
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(2048, 2048);
+    sun.shadow.camera.near    = 0.5;
+    sun.shadow.camera.far     = 80;
+    sun.shadow.camera.left    = -20;
+    sun.shadow.camera.right   =  20;
+    sun.shadow.camera.top     =  20;
+    sun.shadow.camera.bottom  = -20;
+    sun.shadow.bias           = -0.0005;
+    sun.shadow.radius         = 4;          // soft shadow penumbra
+    scene.add(sun);
+    scene.add(sun.target);
+
+    // Fill light — screen-space specularity source
+    const fill = new THREE.PointLight(0x6688cc, 0.8, 40);
+    fill.position.set(-6, 5, -4);
+    scene.add(fill);
+
+    /* ── Ground plane ─────────────────────────────────────────────── */
+    const groundGeo = new THREE.PlaneGeometry(40, 40);
+    const groundMat = new THREE.MeshStandardMaterial({
+      color:     0x2a1f14,   // dark wood tone
+      roughness: 0.85,
+      metalness: 0.0,
+    });
+    const ground = new THREE.Mesh(groundGeo, groundMat);
+    ground.rotation.x = -Math.PI / 2;
+    ground.receiveShadow = true;
+    scene.add(ground);
+
+    // Thin platform plane on top of ground for visual separation
+    const platGeo = new THREE.BoxGeometry(24, 0.12, 16);
+    const platMat = new THREE.MeshStandardMaterial({ color: 0x1a1a2e, roughness: 0.7, metalness: 0.1 });
+    const platform = new THREE.Mesh(platGeo, platMat);
+    platform.position.y = 0.06;
+    platform.receiveShadow = true;
+    platform.castShadow    = false;
+    scene.add(platform);
+
+    /* ── PBR materials ────────────────────────────────────────────── */
+    // Gold  — vec3(1.0, 0.766, 0.336), roughness 0.1, metalness 1.0
+    const matGold = new THREE.MeshStandardMaterial({
+      color:     new THREE.Color(1.0, 0.766, 0.336),
+      roughness: 0.1,
+      metalness: 1.0,
+    });
+
+    // Gold GGX variant — slightly warmer roughness
+    const matGoldGGX = new THREE.MeshStandardMaterial({
+      color:     new THREE.Color(1.0, 0.766, 0.336),
+      roughness: 0.18,
+      metalness: 1.0,
+    });
+
+    // Wood  — vec3(0.588, 0.392, 0.196), roughness 0.75, metalness 0.0
+    const matWood = new THREE.MeshStandardMaterial({
+      color:     new THREE.Color(0.588, 0.392, 0.196),
+      roughness: 0.75,
+      metalness: 0.0,
+    });
+
+    // Topalaz — vec3(1.0, 0.804, 0.608), roughness 0.05, metalness 0.0, transparent
+    const matTopalaz = new THREE.MeshPhysicalMaterial({
+      color:        new THREE.Color(1.0, 0.804, 0.608),
+      roughness:    0.05,
+      metalness:    0.0,
+      transmission: 0.85,
+      ior:          1.62,
+      thickness:    1.2,
+      clearcoat:    1.0,
+      clearcoatRoughness: 0.05,
+    });
+
+    /* ── Cube factory ─────────────────────────────────────────────── */
+    function makeCube(size, mat, x, y, z, castShadow = true) {
+      const geo  = new THREE.BoxGeometry(size[0], size[1], size[2]);
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.position.set(x, y + size[1] / 2, z);
+      mesh.castShadow    = castShadow;
+      mesh.receiveShadow = true;
+      scene.add(mesh);
+      return mesh;
+    }
+
+    /* ── Scene objects ────────────────────────────────────────────── */
+    // Large wood base slab
+    const woodSlab  = makeCube([5, 0.5, 4], matWood,    0,    0.12,  0);
+
+    // Gold cube sitting on top of wood slab — touching it
+    const goldCube  = makeCube([1.6, 1.6, 1.6], matGold,  0, 0.62, 0);
+
+    // Gold GGX cube nearby
+    const goldGGX   = makeCube([1.2, 1.2, 1.2], matGoldGGX, -5, 0.12, -1);
+
+    // Topalaz gem cube — touching gold
+    const topalazCube = makeCube([1.0, 1.0, 1.0], matTopalaz,  1.3, 0.62, 0);
+
+    // Extra wood cubes
+    const woodCubeA = makeCube([1.0, 2.2, 1.0], matWood,   4,  0.12, 2);
+    const woodCubeB = makeCube([0.8, 0.8, 0.8], matWood,  -3,  0.12, 3);
+
+    // Small gold accent cubes
+    const goldSmall1 = makeCube([0.5, 0.5, 0.5], matGold,  -5, 0.12,  2);
+    const goldSmall2 = makeCube([0.5, 0.5, 0.5], matGold,   3, 0.12, -3);
+
+    // Floating topalaz gem (slightly above ground)
+    const topalazFloat = makeCube([0.7, 0.7, 0.7], matTopalaz, -2, 1.4, -3);
+
+    /* ── Touching indicator ───────────────────────────────────────── */
+    // Gold cube and topalaz are touching; highlight with a glow sphere
+    const touchGeo  = new THREE.SphereGeometry(0.08, 16, 16);
+    const touchMat  = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    const touchDot  = new THREE.Mesh(touchGeo, touchMat);
+    touchDot.position.set(0.8, 1.42, 0);   // contact point
+    scene.add(touchDot);
+
+    /* ── Grid helper ──────────────────────────────────────────────── */
+    const grid = new THREE.GridHelper(40, 40, 0x222244, 0x111122);
+    grid.position.y = 0.001;
+    scene.add(grid);
+
+    /* ── Shadow rotation parameters (mirrors shadow_rotation_from_time) ── */
+    const CYCLE   = 120.0;                  // seconds per full rotation
+    const RADIUS  = 14;                     // orbit radius
+    const HEIGHT  =  10;
+
+    /* ── UI elements ──────────────────────────────────────────────── */
+    const elAngle   = document.getElementById('angle');
+    const elClock   = document.getElementById('clock');
+    const elTouching = document.getElementById('touching');
+
+    /* ── Floating animation for topalaz gem ──────────────────────── */
+    const floatBase = topalazFloat.position.y;
+
+    /* ── Resize ───────────────────────────────────────────────────── */
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    /* ── Animate ──────────────────────────────────────────────────── */
+    const clock = new THREE.Clock();
+
+    function checkTouching(a, b, threshold = 0.12) {
+      return a.position.distanceTo(b.position) < threshold + 1.3;
+    }
+
+    function animate() {
+      requestAnimationFrame(animate);
+      const elapsed = clock.getElapsedTime();
+
+      // shadow_rotation_from_time equivalent
+      const angle = ((elapsed % CYCLE) / CYCLE) * Math.PI * 2;
+      sun.position.set(
+        Math.cos(angle) * RADIUS,
+        HEIGHT,
+        Math.sin(angle) * RADIUS
+      );
+      sun.target.position.set(0, 0, 0);
+      sun.target.updateMatrixWorld();
+
+      // Slow cube rotations
+      goldCube.rotation.y    = elapsed * 0.3;
+      topalazCube.rotation.y = elapsed * 0.5;
+      topalazFloat.rotation.x = elapsed * 0.4;
+      topalazFloat.rotation.y = elapsed * 0.6;
+
+      // Float animation
+      topalazFloat.position.y = floatBase + Math.sin(elapsed * 1.2) * 0.3;
+
+      // Touch indicator pulse
+      const pulse = 0.5 + 0.5 * Math.sin(elapsed * 4);
+      touchMat.color.setRGB(pulse, pulse, 1.0);
+
+      controls.update();
+
+      // UI
+      const deg = ((angle * 180) / Math.PI).toFixed(1);
+      elAngle.textContent  = deg + '°';
+      elClock.textContent  = elapsed.toFixed(1) + 's';
+      elTouching.textContent = checkTouching(goldCube, topalazCube)
+        ? 'Gold ↔ Topalaz ✓' : '—';
+
+      renderer.render(scene, camera);
+    }
+
+    animate();
+  </script>
+</body>
+</html>

@@ -1,5 +1,7 @@
 import { createRequire } from 'module';
-import { createWriteStream } from 'fs';
+import { createWriteStream, readFileSync, existsSync } from 'fs';
+import { createServer } from 'http';
+import { extname, join } from 'path';
 import zlib from 'zlib';
 
 const require = createRequire(import.meta.url);
@@ -200,3 +202,35 @@ console.log('Generated: materials/gold_GGX_cavity.png');
 
 await writePNG('materials/gold_GGX_clear_coat.png',  goldGGXIHDR, buildSolidFill(S, S, norm(1.0),  norm(1.0),   norm(1.0)));
 console.log('Generated: materials/gold_GGX_clear_coat.png');
+
+// --- HTTP server — serves index.html and static assets ---
+
+const MIME = {
+  '.html': 'text/html',
+  '.js':   'application/javascript',
+  '.css':  'text/css',
+  '.png':  'image/png',
+  '.c':    'text/plain',
+  '.cpp':  'text/plain',
+  '.ts':   'text/plain',
+  '.lua':  'text/plain',
+  '.raku': 'text/plain',
+  '.py':   'text/plain',
+};
+
+const PORT = 5000;
+
+createServer((req, res) => {
+  let urlPath = req.url === '/' ? '/index.html' : req.url;
+  const filePath = join(process.cwd(), urlPath);
+
+  if (!existsSync(filePath)) {
+    res.writeHead(404); res.end('Not found'); return;
+  }
+
+  const mime = MIME[extname(filePath)] || 'application/octet-stream';
+  res.writeHead(200, { 'Content-Type': mime });
+  res.end(readFileSync(filePath));
+}).listen(PORT, () => {
+  console.log(`Simulation running at http://localhost:${PORT}`);
+});
