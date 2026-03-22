@@ -149,5 +149,54 @@ console.log('Generated: materials/topalaz_metallic.png');
 await writePNG('materials/topalaz_normal.png',    topalazIHDR, buildSolidFill(S, S, 128, 128, 255));
 console.log('Generated: materials/topalaz_normal.png');
 
-await writePNG('materials/topalaz_emission.png',  topalazIHDR, buildSolidFill(S, S, 0, 0, 0));
+await writePNG('materials/topalaz_emission.png',    topalazIHDR, buildSolidFill(S, S, 0, 0, 0));
 console.log('Generated: materials/topalaz_emission.png');
+
+await writePNG('materials/topalaz_specularity.png', topalazIHDR, buildSolidFill(S, S, norm(1.0),  norm(0.804), norm(0.608)));
+console.log('Generated: materials/topalaz_specularity.png');
+
+await writePNG('materials/topalaz_transmission.png', topalazIHDR, buildSolidFill(S, S, norm(0.85), norm(0.85),  norm(0.85)));
+console.log('Generated: materials/topalaz_transmission.png');
+
+await writePNG('materials/topalaz_bump.png',        topalazIHDR, buildSolidFill(S, S, norm(0.71 * 0.43), norm(0.71 * 0.43), norm(0.71 * 0.43)));
+console.log('Generated: materials/topalaz_bump.png');
+
+await writePNG('materials/topalaz_reflection.png',  topalazIHDR, buildSolidFill(S, S, norm(0.71 * 0.32), norm(0.71 * 0.32), norm(0.71 * 0.32)));
+console.log('Generated: materials/topalaz_reflection.png');
+
+await writePNG('materials/topalaz_cavity.png',      topalazIHDR, buildSolidFill(S, S, norm(1.0),  norm(1.0),  norm(1.0)));
+console.log('Generated: materials/topalaz_cavity.png');
+
+await writePNG('materials/topalaz_clear_coat.png',  topalazIHDR, buildSolidFill(S, S, norm(1.0),  norm(1.0),  norm(1.0)));
+console.log('Generated: materials/topalaz_clear_coat.png');
+
+await writePNG('materials/topalaz_alpha_mask.png',  topalazIHDR, buildSolidFill(S, S, norm(1.0),  norm(1.0),  norm(1.0)));
+console.log('Generated: materials/topalaz_alpha_mask.png');
+
+// --- Generate Gold GGX PBR maps (relatives of gold, 256x256 solid fills) ---
+
+const goldGGXIHDR = buildIHDR(S, S);
+
+await writePNG('materials/gold_GGX_albedo.png',      goldGGXIHDR, buildSolidFill(S, S, norm(1.0),  norm(0.766), norm(0.336)));
+console.log('Generated: materials/gold_GGX_albedo.png');
+
+await writePNG('materials/gold_GGX_roughness.png',   goldGGXIHDR, buildSolidFill(S, S, norm(0.1),  norm(0.1),   norm(0.1)));
+console.log('Generated: materials/gold_GGX_roughness.png');
+
+await writePNG('materials/gold_GGX_metallic.png',    goldGGXIHDR, buildSolidFill(S, S, norm(1.0),  norm(1.0),   norm(1.0)));
+console.log('Generated: materials/gold_GGX_metallic.png');
+
+await writePNG('materials/gold_GGX_normal.png',      goldGGXIHDR, buildSolidFill(S, S, 128, 128, 255));
+console.log('Generated: materials/gold_GGX_normal.png');
+
+await writePNG('materials/gold_GGX_emission.png',    goldGGXIHDR, buildSolidFill(S, S, 0, 0, 0));
+console.log('Generated: materials/gold_GGX_emission.png');
+
+await writePNG('materials/gold_GGX_specularity.png', goldGGXIHDR, buildSolidFill(S, S, norm(1.0),  norm(0.766), norm(0.336)));
+console.log('Generated: materials/gold_GGX_specularity.png');
+
+await writePNG('materials/gold_GGX_cavity.png',      goldGGXIHDR, buildSolidFill(S, S, norm(1.0),  norm(1.0),   norm(1.0)));
+console.log('Generated: materials/gold_GGX_cavity.png');
+
+await writePNG('materials/gold_GGX_clear_coat.png',  goldGGXIHDR, buildSolidFill(S, S, norm(1.0),  norm(1.0),   norm(1.0)));
+console.log('Generated: materials/gold_GGX_clear_coat.png');
