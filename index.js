@@ -132,3 +132,22 @@ console.log('Generated: materials/wood_normal.png');
 
 await writePNG('materials/wood_emission.png',  woodIHDR, buildSolidFill(S, S, 0, 0, 0));
 console.log('Generated: materials/wood_emission.png');
+
+// --- Generate Topalaz PBR maps (256x256 solid fills) ---
+
+const topalazIHDR = buildIHDR(S, S);
+
+await writePNG('materials/topalaz_albedo.png',    topalazIHDR, buildSolidFill(S, S, norm(1.0),  norm(0.804), norm(0.608)));
+console.log('Generated: materials/topalaz_albedo.png');
+
+await writePNG('materials/topalaz_roughness.png', topalazIHDR, buildSolidFill(S, S, norm(0.05), norm(0.05),  norm(0.05)));
+console.log('Generated: materials/topalaz_roughness.png');
+
+await writePNG('materials/topalaz_metallic.png',  topalazIHDR, buildSolidFill(S, S, 0, 0, 0));
+console.log('Generated: materials/topalaz_metallic.png');
+
+await writePNG('materials/topalaz_normal.png',    topalazIHDR, buildSolidFill(S, S, 128, 128, 255));
+console.log('Generated: materials/topalaz_normal.png');
+
+await writePNG('materials/topalaz_emission.png',  topalazIHDR, buildSolidFill(S, S, 0, 0, 0));
+console.log('Generated: materials/topalaz_emission.png');
