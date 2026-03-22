@@ -25,19 +25,31 @@ for (let y = 0; y < H; y++) {
   }
 }
 
-function chunk(type, data) {
-  const t = Buffer.from(type);
-  const len = Buffer.alloc(4); len.writeUInt32BE(data.length);
+const CRC_TABLE = new Uint32Array(256);
+for (let i = 0; i < 256; i++) {
+  let c = i;
+  for (let k = 0; k < 8; k++) c = (c & 1) ? (0xedb88320 ^ (c >>> 1)) : (c >>> 1);
+  CRC_TABLE[i] = c;
+}
+
+function crc32(buf) {
   let c = 0xffffffff;
-  for (const b of [...t, ...data]) { c ^= b; for (let i = 0; i < 8; i++) c = (c >>> 1) ^ (c & 1 ? 0xedb88320 : 0); }
-  c ^= 0xffffffff;
-  const crc = Buffer.alloc(4); crc.writeInt32BE(c);
-  return Buffer.concat([len, t, Buffer.from(data), crc]);
+  for (const b of buf) c = CRC_TABLE[(c ^ b) & 0xff] ^ (c >>> 8);
+  return (c ^ 0xffffffff) >>> 0;
+}
+
+function chunk(type, data) {
+  const typeBuf = Buffer.from(type);
+  const dataBuf = Buffer.isBuffer(data) ? data : Buffer.from(data);
+  const len = Buffer.alloc(4); len.writeUInt32BE(dataBuf.length);
+  const crcBuf = Buffer.alloc(4);
+  crcBuf.writeUInt32BE(crc32(Buffer.concat([typeBuf, dataBuf])));
+  return Buffer.concat([len, typeBuf, dataBuf, crcBuf]);
 }
 
 const ihdr = Buffer.alloc(13);
 ihdr.writeUInt32BE(W, 0); ihdr.writeUInt32BE(H, 4);
-ihdr[8] = 8; ihdr[9] = 2; ihdr[10] = 0; ihdr[11] = 0; ihdr[12] = 0;
+ihdr[8] = 8; ihdr[9] = 6; ihdr[10] = 0; ihdr[11] = 0; ihdr[12] = 0;
 
 const idat = zlib.deflateSync(Buffer.from(raw));
 
